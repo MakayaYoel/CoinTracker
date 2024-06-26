@@ -114,7 +114,10 @@ var (
 
 			p.Add(GetCurrencies()...)
 			p.SetPageFooters()
+
 			p.Widget.Timeout = time.Second * 45
+			p.Widget.UserWhitelist = []string{i.Member.User.ID}
+
 			p.Spawn()
 		},
 	}

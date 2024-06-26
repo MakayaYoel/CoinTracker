@@ -1,10 +1,13 @@
 package bot
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"time"
 
+	"github.com/Necroforger/dgwidgets"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -16,7 +19,29 @@ var (
 	commands = []*discordgo.ApplicationCommand{
 		{
 			Name:        "help",
-			Description: "Learn what are my commands!",
+			Description: "Shows you all of CoinTracker's commands.",
+		},
+		{
+			Name:        "getcoinprice",
+			Description: "Returns the current price of a specified coin.",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "id",
+					Description: "The coin's id (e.g. Bitcoin, Ethereum)",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "currency",
+					Description: "The currency you want the information on (e.g. CAD, USD)",
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "currencies",
+			Description: "Returns a list of valid currencies.",
 		},
 	}
 
@@ -33,7 +58,22 @@ var (
 							Fields: []*discordgo.MessageEmbedField{
 								{
 									Name:   "/help",
-									Value:  "Shows you all my commands!",
+									Value:  "Shows you all of CoinTracker's commands.",
+									Inline: false,
+								},
+								{
+									Name:   "/getcoinprice <id> <currency>",
+									Value:  "Returns the current price of a specified coin.",
+									Inline: false,
+								},
+								{
+									Name:   "/currencies",
+									Value:  "Returns a list of valid currencies.",
+									Inline: false,
+								},
+								{
+									Name:   "Credits",
+									Value:  "This bot is powered by the CoinGecko API.",
 									Inline: false,
 								},
 							},
@@ -41,6 +81,41 @@ var (
 					},
 				},
 			})
+		},
+
+		"getcoinprice": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			options := i.ApplicationCommandData().Options
+
+			var content string
+			embeds, err := GetCoinPrice(options[0].StringValue(), options[1].StringValue())
+
+			if err != nil {
+				content = fmt.Sprintf("There was an error trying to complete the request: %s.", err.Error())
+			}
+
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: content,
+					Embeds:  embeds,
+				},
+			})
+		},
+
+		"currencies": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Creating pagination widget...",
+				},
+			})
+
+			p := dgwidgets.NewPaginator(s, i.ChannelID)
+
+			p.Add(GetCurrencies()...)
+			p.SetPageFooters()
+			p.Widget.Timeout = time.Second * 45
+			p.Spawn()
 		},
 	}
 )
@@ -81,6 +156,8 @@ func Start() {
 			registeredCommands[i] = cmd
 		}
 	}
+
+	GetCurrencies()
 
 	// Wait for interrupt signal to turn off the bot
 	c := make(chan os.Signal, 1)

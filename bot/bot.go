@@ -86,6 +86,7 @@ var (
 		"getcoinprice": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			options := i.ApplicationCommandData().Options
 
+			// get coin price
 			var content string
 			embeds, err := GetCoinPrice(options[0].StringValue(), options[1].StringValue())
 
@@ -103,22 +104,37 @@ var (
 		},
 
 		"currencies": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			var content string
+
+			// get currencies
+			currencies, err := GetCurrencies()
+
+			if err != nil {
+				content = fmt.Sprintf("There was an error trying to complete the request: %s.", err.Error())
+			} else {
+				content = "Creating pagination widget..."
+			}
+
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "Creating pagination widget...",
+					Content: content,
 				},
 			})
 
-			p := dgwidgets.NewPaginator(s, i.ChannelID)
+			// make paginator if there's no errors.
+			if err == nil {
+				p := dgwidgets.NewPaginator(s, i.ChannelID)
 
-			p.Add(GetCurrencies()...)
-			p.SetPageFooters()
+				p.Add(currencies...)
+				p.SetPageFooters()
 
-			p.Widget.Timeout = time.Second * 45
-			p.Widget.UserWhitelist = []string{i.Member.User.ID}
+				p.Widget.Timeout = time.Second * 45
+				p.Widget.UserWhitelist = []string{i.Member.User.ID}
 
-			p.Spawn()
+				p.Spawn()
+			}
+
 		},
 	}
 )
@@ -159,8 +175,6 @@ func Start() {
 			registeredCommands[i] = cmd
 		}
 	}
-
-	GetCurrencies()
 
 	// Wait for interrupt signal to turn off the bot
 	c := make(chan os.Signal, 1)

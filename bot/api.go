@@ -18,23 +18,7 @@ import (
 
 func GetCoinPrice(id string, currency string) ([]*discordgo.MessageEmbed, error) {
 	url := fmt.Sprintf("https://api.coingecko.com/api/v3/simple/price?ids=%s&vs_currencies=%s&include_market_cap=false&include_24hr_vol=false&include_24hr_change=false&include_last_updated_at=true&precision=full", id, currency)
-
-	request, _ := http.NewRequest("GET", url, nil)
-	request.Header.Add("accept", "application/json")
-	request.Header.Add("x-cg-demo-api-key", CGToken)
-
-	response, err := http.DefaultClient.Do(request)
-
-	if err != nil {
-		return nil, fmt.Errorf("could not complete request")
-	}
-
-	defer response.Body.Close()
-
-	body, _ := io.ReadAll(response.Body)
-
-	var responseData interface{}
-	json.Unmarshal([]byte(body), &responseData)
+	responseData := getResponseData(url, map[string]string{"x-cg-demo-api-key": CGToken})
 
 	// type assert
 	rData, ok := responseData.(map[string]interface{})
@@ -88,29 +72,12 @@ func GetCoinPrice(id string, currency string) ([]*discordgo.MessageEmbed, error)
 	}, nil
 }
 
-func GetCurrencies() []*discordgo.MessageEmbed {
-	url := "https://api.coingecko.com/api/v3/simple/supported_vs_currencies"
-
-	request, _ := http.NewRequest("GET", url, nil)
-	request.Header.Add("accept", "application/json")
-
-	response, err := http.DefaultClient.Do(request)
-
-	if err != nil {
-		log.Fatal("for later 1")
-	}
-
-	defer response.Body.Close()
-
-	body, _ := io.ReadAll(response.Body)
-
-	var responseData interface{}
-	json.Unmarshal([]byte(body), &responseData)
-
+func GetCurrencies() ([]*discordgo.MessageEmbed, error) {
+	responseData := getResponseData("https://api.coingecko.com/api/v3/simple/supported_vs_currencies", nil)
 	data, err := cnvToEmbedSlice(responseData.([]interface{}))
 
 	if err != nil {
-		log.Fatal("for later 2")
+		return nil, fmt.Errorf("could not retrieve currencies: %s", err.Error())
 	}
 
 	var pages []*discordgo.MessageEmbed
@@ -130,7 +97,7 @@ func GetCurrencies() []*discordgo.MessageEmbed {
 		data = data[maxAmount:]
 	}
 
-	return pages
+	return pages, nil
 }
 
 func cnvToEmbedSlice(data []interface{}) ([]*discordgo.MessageEmbedField, error) {
@@ -139,7 +106,7 @@ func cnvToEmbedSlice(data []interface{}) ([]*discordgo.MessageEmbedField, error)
 	for i, v := range data {
 		str, ok := v.(string)
 		if !ok {
-			return nil, fmt.Errorf("could not convert element at index %d to string", i)
+			return nil, fmt.Errorf("could not convert data to embed slice", i)
 		}
 
 		result[i] = &discordgo.MessageEmbedField{
@@ -149,4 +116,29 @@ func cnvToEmbedSlice(data []interface{}) ([]*discordgo.MessageEmbedField, error)
 	}
 
 	return result, nil
+}
+
+func getResponseData(url string, headers map[string]string) interface{} {
+	request, _ := http.NewRequest("GET", url, nil)
+
+	request.Header.Add("accept", "application/json")
+
+	for h, hd := range headers {
+		request.Header.Add(h, hd)
+	}
+
+	response, err := http.DefaultClient.Do(request)
+
+	if err != nil {
+		log.Fatalf("could not complete request: %s", err.Error())
+	}
+
+	defer response.Body.Close()
+
+	body, _ := io.ReadAll(response.Body)
+
+	var responseData interface{}
+	json.Unmarshal([]byte(body), &responseData)
+
+	return responseData
 }

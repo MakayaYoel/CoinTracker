@@ -1,4 +1,4 @@
-module github.com/MakayaYoel/coin-tracker
+module github.com/MakayaYoel/CoinTracker
 
 go 1.22.0
 

@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/MakayaYoel/coin-tracker/bot"
+	"github.com/MakayaYoel/CoinTracker/bot"
 	"github.com/joho/godotenv"
 )
 

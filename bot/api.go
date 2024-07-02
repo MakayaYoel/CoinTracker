@@ -106,7 +106,7 @@ func cnvToEmbedSlice(data []interface{}) ([]*discordgo.MessageEmbedField, error)
 	for i, v := range data {
 		str, ok := v.(string)
 		if !ok {
-			return nil, fmt.Errorf("could not convert data to embed slice", i)
+			return nil, fmt.Errorf("could not convert data at index %d to embed slice", i)
 		}
 
 		result[i] = &discordgo.MessageEmbedField{

@@ -16,6 +16,10 @@ import (
 	"golang.org/x/text/message"
 )
 
+// maxCurrenciesPerPage represents the max currencies displayed in the "currencies" command pagination widget.
+const maxCurrenciesPerPage = 9
+
+// GetCoinPrice returns a discordgo.MessageEmbed containing the specified coin's price in the also specified currency.
 func GetCoinPrice(id string, currency string) ([]*discordgo.MessageEmbed, error) {
 	url := fmt.Sprintf("https://api.coingecko.com/api/v3/simple/price?ids=%s&vs_currencies=%s&include_market_cap=false&include_24hr_vol=false&include_24hr_change=false&include_last_updated_at=true&precision=full", id, currency)
 	responseData := getResponseData(url, map[string]string{"x-cg-demo-api-key": CGToken})
@@ -72,6 +76,7 @@ func GetCoinPrice(id string, currency string) ([]*discordgo.MessageEmbed, error)
 	}, nil
 }
 
+// GetCurrencies returns a slice of MessageEmbeds containing the available currencies.
 func GetCurrencies() ([]*discordgo.MessageEmbed, error) {
 	responseData := getResponseData("https://api.coingecko.com/api/v3/simple/supported_vs_currencies", nil)
 	data, err := cnvToEmbedSlice(responseData.([]interface{}))
@@ -83,7 +88,7 @@ func GetCurrencies() ([]*discordgo.MessageEmbed, error) {
 	var pages []*discordgo.MessageEmbed
 
 	for len(data) != 0 {
-		maxAmount := int(math.Min(9, float64(len(data))))
+		maxAmount := int(math.Min(maxCurrenciesPerPage, float64(len(data))))
 
 		// Get page, update data
 		embed := &discordgo.MessageEmbed{
@@ -100,6 +105,7 @@ func GetCurrencies() ([]*discordgo.MessageEmbed, error) {
 	return pages, nil
 }
 
+// cnvToEmbedSlice converts the specified interface slice into a MessageEmbedField slice.
 func cnvToEmbedSlice(data []interface{}) ([]*discordgo.MessageEmbedField, error) {
 	result := make([]*discordgo.MessageEmbedField, len(data))
 
@@ -118,6 +124,7 @@ func cnvToEmbedSlice(data []interface{}) ([]*discordgo.MessageEmbedField, error)
 	return result, nil
 }
 
+// getResponseData() returns an interface representing the response data of an HTTP GET request sent to the specified url with the also specified headers.
 func getResponseData(url string, headers map[string]string) interface{} {
 	request, _ := http.NewRequest("GET", url, nil)
 
